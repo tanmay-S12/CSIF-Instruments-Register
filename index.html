@@ -603,11 +603,18 @@
     (function () {
       const RAW = JSON.parse(document.getElementById('instrument-data').textContent);
 
-      const FIELD_ORDER = ['Make', 'Model', 'Date_of_Installation', 'Facility_Management_Division', 'Category',
+      // const FIELD_ORDER = ['Make', 'Model', 'Date_of_Installation', 'Facility_Management_Division', 'Category',
+      //   'Available_Equipment_Mode_of_use', 'Facility_In_Charge', 'Facility_Manager', 'Facility_Operator', 'Department',
+      //   'Features_Working_Principle', 'Body', 'Facility_Description', 'Instruction_for_Sample_Preparation', 'Applications',
+      //   'Chemical_allowed', 'Gases_allowed', 'SOP', 'Training and Other Policy Documents',
+      //   'Other Related Details Regarding Instrument', 'Publications'];
+
+
+      // Only required fields for spec document
+      const FIELD_ORDER = ['Make', 'Model', '', 'Category',
         'Available_Equipment_Mode_of_use', 'Facility_In_Charge', 'Facility_Manager', 'Facility_Operator', 'Department',
         'Features_Working_Principle', 'Body', 'Facility_Description', 'Instruction_for_Sample_Preparation', 'Applications',
-        'Chemical_allowed', 'Gases_allowed', 'SOP', 'Training and Other Policy Documents',
-        'Other Related Details Regarding Instrument', 'Publications'];
+        'Chemical_allowed', 'Gases_allowed', 'Publications'];
 
       const FIELD_LABELS = {
         Make: 'Make', Model: 'Model', Date_of_Installation: 'Date of installation',
