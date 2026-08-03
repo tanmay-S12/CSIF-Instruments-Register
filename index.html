@@ -360,6 +360,27 @@
             color: var(--ink);
         }
 
+        .field textarea {
+            width: 100%;
+            border: 1.5px solid var(--line);
+            background: var(--white);
+            border-radius: 2px;
+            padding: 10px 12px;
+            font-family: 'Inter', sans-serif;
+            font-size: 14.5px;
+            line-height: 1.55;
+            resize: vertical;
+            min-height: 44px;
+            outline: none;
+            color: var(--ink);
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        .field textarea:focus {
+            border-color: var(--teal);
+        }
+
         .field.missing {
             background: var(--amber-tint);
             margin: 0 -14px;
@@ -373,29 +394,12 @@
         }
 
         .field.missing textarea {
-            width: 100%;
             border: 1.5px dashed var(--amber-line);
-            background: var(--white);
-            border-radius: 2px;
-            padding: 10px 12px;
-            font-family: 'Inter', sans-serif;
-            font-size: 14px;
-            resize: vertical;
-            min-height: 60px;
-            outline: none;
-            color: var(--ink);
         }
 
         .field.missing textarea:focus {
             border-style: solid;
             border-color: var(--amber);
-        }
-
-        .field.filled-by-user {
-            background: var(--green-tint);
-            margin: 0 -14px;
-            padding: 14px;
-            border-radius: 2px;
         }
 
         .filled-tag {
@@ -604,27 +608,6 @@
         (function () {
             const RAW = JSON.parse(document.getElementById('instrument-data').textContent);
 
-            // const FIELD_ORDER = ['Make','Model','Date_of_Installation','Facility_Management_Division','Category',
-            //   'Available_Equipment_Mode_of_use','Facility_In_Charge','Facility_Manager','Facility_Operator','Department',
-            //   'Features_Working_Principle','Body','Facility_Description','Instruction_for_Sample_Preparation','Applications',
-            //   'Chemical_allowed','Gases_allowed','SOP','Training and Other Policy Documents',
-            //   'Other Related Details Regarding Instrument','Publications'];
-
-            // const FIELD_LABELS = {
-            //   Make:'Make', Model:'Model', Date_of_Installation:'Date of installation',
-            //   Facility_Management_Division:'Managed by (division)', Category:'Category',
-            //   Available_Equipment_Mode_of_use:'Available equipment / mode of use',
-            //   Facility_In_Charge:'Facility in-charge', Facility_Manager:'Facility manager',
-            //   Facility_Operator:'Facility operator', Department:'Department',
-            //   Features_Working_Principle:'Features & working principle', Body:'Specifications',
-            //   Facility_Description:'Description', Instruction_for_Sample_Preparation:'Sample preparation',
-            //   Applications:'Applications', Chemical_allowed:'Chemicals allowed', Gases_allowed:'Gases allowed',
-            //   SOP:'SOP document', 'Training and Other Policy Documents':'Training / policy documents',
-            //   'Other Related Details Regarding Instrument':'Other details', Publications:'Publications'
-            // };
-            // const LONG_FIELDS = new Set(['Features_Working_Principle','Body','Facility_Description',
-            //   'Instruction_for_Sample_Preparation','Applications']);
-
             // Only required fields for spec document Category
             // make all feilds compulsory and follow order 
             const FIELD_ORDER = ['Make', 'Model',
@@ -647,6 +630,7 @@
             };
             const LONG_FIELDS = new Set(['Features_Working_Principle', 'Body', 'Facility_Description',
                 'Instruction_for_Sample_Preparation', 'Applications']);
+
 
             function isEmpty(v) { return !v || !String(v).trim(); }
 
@@ -828,8 +812,6 @@
           <div class="field-grid" id="fieldGrid">${fieldsHtml}</div>
           <div class="submit-bar">
             <button class="submit-btn" id="submitBtn">Save</button>
-              <button class="back-btn" id="backBtnBottom" type="button">&larr; Back to search</button>
-
             <span class="save-msg" id="saveMsg"></span>
           </div>
         </div>
@@ -841,17 +823,20 @@
                     searchPanel.style.display = 'block';
                     renderResults(searchInput.value);
                 });
-                // below back button
-                document.getElementById('backBtnBottom').addEventListener('click', () => {
-                    detailPanel.style.display = 'none';
-                    searchPanel.style.display = 'block';
-                    renderResults(searchInput.value);
-                });
-                // Live-update the "missing" highlight as the user types/clears a field.
+
+                // Live-update the "missing" highlight as the user types/clears a field,
+                // and auto-grow each textarea to fit its content (so prefilled long text
+                // like Specifications/Description isn't cramped into a tiny scroll box).
+                function autoGrow(ta) {
+                    ta.style.height = 'auto';
+                    ta.style.height = ta.scrollHeight + 'px';
+                }
                 detailPanel.querySelectorAll('.field[data-field] textarea').forEach(ta => {
+                    autoGrow(ta);
                     ta.addEventListener('input', () => {
                         const field = ta.closest('.field');
                         field.classList.toggle('missing', ta.value.trim() === '');
+                        autoGrow(ta);
                     });
                 });
 
