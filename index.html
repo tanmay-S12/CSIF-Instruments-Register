@@ -610,23 +610,25 @@
       //   'Other Related Details Regarding Instrument', 'Publications'];
 
 
-      // Only required fields for spec document
-      const FIELD_ORDER = ['Make', 'Model', '', 'Category',
-        'Available_Equipment_Mode_of_use', 'Facility_In_Charge', 'Facility_Manager', 'Facility_Operator', 'Department',
-        'Features_Working_Principle', 'Body', 'Facility_Description', 'Instruction_for_Sample_Preparation', 'Applications',
+      // Only required fields for spec document Category
+      // make all feilds compulsory and follow order 
+      const FIELD_ORDER = ['Make', 'Model',
+        'Facility_In_Charge', 'Facility_Manager', 'Facility_Operator',
+        'Features_Working_Principle', 'Body', 'Available_Equipment_Mode_of_use', 'Facility_Description', 'Applications', 'Instruction_for_Sample_Preparation',
         'Chemical_allowed', 'Gases_allowed', 'Publications'];
 
+      // removed -- Category: 'Category', 'Department', Department: 'Department',
       const FIELD_LABELS = {
         Make: 'Make', Model: 'Model', Date_of_Installation: 'Date of installation',
-        Facility_Management_Division: 'Managed by (division)', Category: 'Category',
-        Available_Equipment_Mode_of_use: 'Available equipment / mode of use',
-        Facility_In_Charge: 'Facility in-charge', Facility_Manager: 'Facility manager',
-        Facility_Operator: 'Facility operator', Department: 'Department',
-        Features_Working_Principle: 'Features & working principle', Body: 'Specifications',
+        Facility_Management_Division: 'Managed by (division)',
+        Available_Equipment_Mode_of_use: 'Available equipment / mode of use (If Any)',
+        Facility_In_Charge: 'Facility in-charge', Facility_Manager: 'Facility manager (If Assigned)',
+        Facility_Operator: 'Facility operator',
+        Features_Working_Principle: 'Features (Fundamentals) & working principle', Body: 'Specifications',
         Facility_Description: 'Description', Instruction_for_Sample_Preparation: 'Sample preparation',
-        Applications: 'Applications', Chemical_allowed: 'Chemicals allowed', Gases_allowed: 'Gases allowed',
+        Applications: 'Applications', Chemical_allowed: 'Chemicals allowed (If Any)', Gases_allowed: 'Gases allowed (If Any)',
         SOP: 'SOP document', 'Training and Other Policy Documents': 'Training / policy documents',
-        'Other Related Details Regarding Instrument': 'Other details', Publications: 'Publications'
+        'Other Related Details Regarding Instrument': 'Other details', Publications: 'Publications (Top five)'
       };
       const LONG_FIELDS = new Set(['Features_Working_Principle', 'Body', 'Facility_Description',
         'Instruction_for_Sample_Preparation', 'Applications']);
@@ -820,6 +822,7 @@
             <button class="submit-btn" id="submitBtn" ${missingTotal === 0 ? 'style="display:none;"' : ''}>Save my additions</button>
             <span class="save-msg" id="saveMsg"></span>
           </div>
+          <button class="back-btn" id="backBtn">&larr; Back to search</button>
         </div>
       </div>
     `;
