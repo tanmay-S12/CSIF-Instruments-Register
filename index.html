@@ -696,8 +696,24 @@
                 }
             }
 
+            // async function saveSubmission(srNo, facility, data) {
+            //     const payload = { srNo: srNo, facility: facility, fields: data.fields, filledBy: data.filledBy, updatedAt: data.updatedAt };
+            //     const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) });
+            //     const result = await res.json();
+            //     if (!result || result.status !== 'ok') throw new Error('save failed');
+            //     SUBMISSIONS[String(srNo)] = { fields: data.fields, filledBy: data.filledBy, updatedAt: data.updatedAt };
+            // }
+
             async function saveSubmission(srNo, facility, data) {
-                const payload = { srNo: srNo, facility: facility, fields: data.fields, filledBy: data.filledBy, updatedAt: data.updatedAt };
+                // Apps Script matches columns by their header LABEL text, not the internal
+                // field code — so translate keys (e.g. Facility_In_Charge) to labels
+                // (e.g. "Facility in-charge") before sending.
+                const labeledFields = {};
+                Object.keys(data.fields).forEach(f => {
+                    const label = FIELD_LABELS[f] || f;
+                    labeledFields[label] = data.fields[f];
+                });
+                const payload = { srNo: srNo, facility: facility, fields: labeledFields, filledBy: data.filledBy, updatedAt: data.updatedAt };
                 const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) });
                 const result = await res.json();
                 if (!result || result.status !== 'ok') throw new Error('save failed');
