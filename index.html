@@ -630,6 +630,31 @@
                 SOP: 'SOP document', 'Training and Other Policy Documents': 'Training / policy documents',
                 'Other Related Details Regarding Instrument': 'Other details', Publications: 'Publications (Top five)'
             };
+
+            // Exact Google Sheet column headers — must match your Sheet precisely.
+            // This is intentionally separate from FIELD_LABELS (the on-screen wording),
+            // since that gets customized for readability and no longer matches headers 1:1.
+            const SHEET_HEADERS = {
+                Make: 'Make',
+                Model: 'Model',
+                Date_of_Installation: 'Date of installation',
+                Facility_Management_Division: 'Managed by (division)',
+                Available_Equipment_Mode_of_use: 'Available equipment / mode of use',
+                Facility_In_Charge: 'Facility in-charge',
+                Facility_Manager: 'Facility manager',
+                Facility_Operator: 'Facility operator',
+                Features_Working_Principle: 'Features & working principle',
+                Body: 'Specifications',
+                Facility_Description: 'Description',
+                Instruction_for_Sample_Preparation: 'Sample preparation',
+                Applications: 'Applications',
+                Chemical_allowed: 'Chemicals allowed',
+                Gases_allowed: 'Gases allowed',
+                SOP: 'SOP document',
+                'Training and Other Policy Documents': 'Training / policy documents',
+                'Other Related Details Regarding Instrument': 'Other details',
+                Publications: 'Publications'
+            };
             const LONG_FIELDS = new Set(['Features_Working_Principle', 'Body', 'Facility_Description',
                 'Instruction_for_Sample_Preparation', 'Applications']);
 
@@ -708,13 +733,10 @@
             // }
 
             async function saveSubmission(srNo, facility, data) {
-                // Apps Script matches columns by their header LABEL text, not the internal
-                // field code — so translate keys (e.g. Facility_In_Charge) to labels
-                // (e.g. "Facility in-charge") before sending.
                 const labeledFields = {};
                 Object.keys(data.fields).forEach(f => {
-                    const label = FIELD_LABELS[f] || f;
-                    labeledFields[label] = data.fields[f];
+                    const header = SHEET_HEADERS[f] || f;
+                    labeledFields[header] = data.fields[f];
                 });
                 const payload = { srNo: srNo, facility: facility, fields: labeledFields, filledBy: data.filledBy, updatedAt: data.updatedAt };
                 const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) });
