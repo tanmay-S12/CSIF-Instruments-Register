@@ -615,6 +615,8 @@
                 'Features_Working_Principle', 'Body', 'Available_Equipment_Mode_of_use', 'Facility_Description', 'Applications', 'Instruction_for_Sample_Preparation',
                 'Chemical_allowed', 'Gases_allowed', 'Publications'];
 
+            const NON_EDITABLE_FIELDS = new Set(['Make', 'Model', 'Facility_In_Charge', 'Facility_Manager', 'Facility_Operator']);
+
             // removed -- Category: 'Category', 'Department', Department: 'Department',
             const FIELD_LABELS = {
                 Make: 'Make', Model: 'Model', Date_of_Installation: 'Date of installation',
@@ -667,6 +669,7 @@
             // ---------- backend config ----------
             // Paste the URL you get after deploying the Google Apps Script web app (see setup instructions).
             const API_URL = "https://script.google.com/macros/s/AKfycbwVY5y3JbRtBpDxIkO2GPvg3SuOl5j9gnUQc2Bxctwk7Hw7q5XAIF7G5OxlpFg4qjWDdA/exec";
+
 
             const LABEL_TO_FIELD = {};
             FIELD_ORDER.forEach(f => { LABEL_TO_FIELD[FIELD_LABELS[f] || f] = f; });
@@ -806,12 +809,23 @@
                     const label = FIELD_LABELS[f] || f;
                     const val = currentValue(f);
                     const empty = isEmpty(val);
-                    fieldsHtml += `<div class="field ${empty ? 'missing' : ''}" data-field="${f}">
-        <div class="field-label">${label} <span>required</span></div>
+
+                    if (NON_EDITABLE_FIELDS.has(f)) {
+                        // Read-only display — no textarea, no "required" pill
+                        fieldsHtml += `<div class="field" data-field="${f}" data-readonly="true">
+        <div class="field-label"><span class="label-text">${label}</span></div>
+        <div class="field-value">${escapeHtml(val) || '<em style="color:var(--ink-soft);">Not provided</em>'}</div>
+      </div>`;
+                    } else {
+                        fieldsHtml += `<div class="field${empty ? ' missing' : ''}" data-field="${f}">
+        <div class="field-label">
+          <span class="label-text">${label}</span>
+          <span class="status-pill">${empty ? 'needs input' : '✓ filled'}</span>
+        </div>
         <textarea placeholder="Add ${label.toLowerCase()}…" rows="${LONG_FIELDS.has(f) ? 5 : 2}">${escapeHtml(val)}</textarea>
       </div>`;
+                    }
                 });
-
                 detailPanel.innerHTML = `
       <button class="back-btn" id="backBtn">&larr; Back to search</button>
       <div class="card">
@@ -862,8 +876,26 @@
                     const filledBy = document.getElementById('filledByInput').value.trim();
                     const updated = {};
                     const emptyLabels = [];
+                    // detailPanel.querySelectorAll('.field[data-field]').forEach(el => {
+                    //     const f = el.dataset.field;
+                    //     const ta = el.querySelector('textarea');
+                    //     const val = ta.value.trim();
+                    //     updated[f] = val;
+                    //     if (!val) {
+                    //         emptyLabels.push(FIELD_LABELS[f] || f);
+                    //         el.classList.add('missing');
+                    //     } else {
+                    //         el.classList.remove('missing');
+                    //     }
+                    // });
+
                     detailPanel.querySelectorAll('.field[data-field]').forEach(el => {
                         const f = el.dataset.field;
+                        if (el.dataset.readonly === 'true') {
+                            // Not user-editable — just carry through its current value unchanged.
+                            updated[f] = currentValue(f);
+                            return;
+                        }
                         const ta = el.querySelector('textarea');
                         const val = ta.value.trim();
                         updated[f] = val;
