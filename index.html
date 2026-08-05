@@ -929,6 +929,16 @@
                         }
                     });
 
+                    // Name is mandatory too
+                    if (!filledBy) {
+                        saveMsg.textContent = 'Please enter your name before submitting.';
+                        saveMsg.classList.add('error');
+                        nameInput.style.borderColor = 'var(--amber)';
+                        nameInput.focus();
+                        return;
+                    } else {
+                        nameInput.style.borderColor = '';
+                    }
                     if (emptyLabels.length > 0) {
                         saveMsg.textContent = `Please fill in: ${emptyLabels.slice(0, 3).join(', ')}${emptyLabels.length > 3 ? ` (+${emptyLabels.length - 3} more)` : ''}`;
                         saveMsg.classList.add('error');
