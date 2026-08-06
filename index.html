@@ -706,6 +706,7 @@
                 try {
                     const res = await fetch(API_URL, { method: 'GET' });
                     const rows = await res.json();
+                    console.log("refreshSubmission rows--", rows);
                     const next = {};
                     rows.forEach(row => {
                         const srNo = String(row['Sr No']);
@@ -817,6 +818,9 @@
 
                 // Current value = whatever's in the Sheet (if someone already edited it there),
                 // otherwise fall back to the original baked-in data.
+                console.log("Submission:", submission);
+                console.log("Body from sheet:", submission.fields["Body"]);
+                console.log("Specifications column:", submission.fields);
                 function currentValue(f) {
                     const fromSheet = submission.fields[f];
                     if (!isEmpty(fromSheet)) return fromSheet;
