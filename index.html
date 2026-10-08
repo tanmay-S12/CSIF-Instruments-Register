@@ -1033,7 +1033,7 @@
                 sorted.forEach(r => {
                     const rowArr = [r.rec.Sr_no, r.rec.Facility];
                     FIELD_ORDER.forEach(f => {
-                        const val = !isEmpty(r.rec[f]) ? r.rec[f] : (r.sub.fields && r.sub.fields[f]) || '';
+                           const val = !isEmpty(r.sub.fields && r.sub.fields[f]) ? r.sub.fields[f] : (r.rec[f] || '');
                         rowArr.push(val);
                     });
                     rowArr.push(r.sub.filledBy || '');
