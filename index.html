@@ -376,6 +376,12 @@
             margin-left: 6px;
         }
 
+        .confirm-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
         .confirm-item input {
             width: 100%;
             padding: 9px 10px;
@@ -609,6 +615,10 @@
         }
 
         @media (max-width:640px) {
+            .confirm-row {
+                grid-template-columns: 1fr;
+            }
+
             .card-body {
                 padding: 20px 16px 24px;
             }
@@ -710,18 +720,32 @@
                 'Other Related Details Regarding Instrument': 'Other details',
                 Publications: 'Publications',
                 // Confirmation columns — these headers must exist in the Sheet exactly as written.
-                Confirm_In_Charge: 'In-charge confirmation',
-                Confirm_Manager: 'Manager confirmation',
-                Confirm_Operator: 'Operator confirmation'
+                Confirm_In_Charge_Name: 'In-charge confirmation - Name',
+                Confirm_In_Charge_LDAP: 'In-charge confirmation - LDAP ID',
+                Confirm_Manager_Name: 'Manager confirmation - Name',
+                Confirm_Manager_LDAP: 'Manager confirmation - LDAP ID',
+                Confirm_Operator1_Name: 'Operator confirmation 1 - Name',
+                Confirm_Operator1_LDAP: 'Operator confirmation 1 - LDAP ID',
+                Confirm_Operator2_Name: 'Operator confirmation 2 - Name',
+                Confirm_Operator2_LDAP: 'Operator confirmation 2 - LDAP ID',
+                Confirm_Operator3_Name: 'Operator confirmation 3 - Name',
+                Confirm_Operator3_LDAP: 'Operator confirmation 3 - LDAP ID'
             };
 
             // "Are the in-charge / manager / operator details correct?" answers.
+            // Each person has a Name and an LDAP ID (NA in both if the listed details are correct).
             // 'current' is the form field whose value is shown as "Currently listed".
             const CONFIRM_FIELDS = [
-                { key: 'Confirm_In_Charge', label: 'Facility In-charge', current: 'Facility_In_Charge' },
-                { key: 'Confirm_Manager', label: 'Facility Manager', current: 'Facility_Manager' },
-                { key: 'Confirm_Operator', label: 'Facility Operator', current: 'Facility_Operator' }
+                { label: 'Facility In-charge', current: 'Facility_In_Charge', nameKey: 'Confirm_In_Charge_Name', ldapKey: 'Confirm_In_Charge_LDAP' },
+                { label: 'Facility Manager', current: 'Facility_Manager', nameKey: 'Confirm_Manager_Name', ldapKey: 'Confirm_Manager_LDAP' },
+                { label: 'Facility Operator 1', current: 'Facility_Operator', nameKey: 'Confirm_Operator1_Name', ldapKey: 'Confirm_Operator1_LDAP' },
+                { label: 'Facility Operator 2', hint: 'Second operator, if any (enter NA in both boxes if none)', nameKey: 'Confirm_Operator2_Name', ldapKey: 'Confirm_Operator2_LDAP' },
+                { label: 'Facility Operator 3', hint: 'Third operator, if any (enter NA in both boxes if none)', nameKey: 'Confirm_Operator3_Name', ldapKey: 'Confirm_Operator3_LDAP' }
             ];
+            const CONFIRM_KEYS = [];
+            CONFIRM_FIELDS.forEach(c => { CONFIRM_KEYS.push(c.nameKey, c.ldapKey); });
+            const isNA = v => /^n\/?a$/i.test(v);
+
             const LONG_FIELDS = new Set(['Features_Working_Principle', 'Body', 'Facility_Description',
                 'Instruction_for_Sample_Preparation', 'Applications']);
 
@@ -729,6 +753,7 @@
             function isEmpty(v) { return !v || !String(v).trim(); }
 
             document.getElementById('headerCount').textContent = RAW.length + ' entries in the register';
+
 
             // ---------- tabs ----------
             const tabBar = document.getElementById('tabBar');
@@ -778,7 +803,7 @@
                     rows.forEach(row => {
                         const srNo = String(row['Sr No']);
                         const fields = {};
-                        FIELD_ORDER.concat(CONFIRM_FIELDS.map(c => c.key)).forEach(f => {
+                        FIELD_ORDER.concat(CONFIRM_KEYS).forEach(f => {
                             const label = SHEET_HEADERS[f] || f;
                             if (row[label] !== undefined && row[label] !== null && String(row[label]).trim() !== '') fields[f] = row[label];
                         });
@@ -921,10 +946,15 @@
                 });
                 let confirmHtml = '';
                 CONFIRM_FIELDS.forEach(c => {
-                    const listed = currentValue(c.current);
+                    const note = c.current
+                        ? 'Currently listed: ' + escapeHtml(currentValue(c.current) || 'Not provided')
+                        : escapeHtml(c.hint || '');
                     confirmHtml += `<div class="confirm-item">
-            <label for="confirm_${c.key}">${c.label}<span class="confirm-current">Currently listed: ${escapeHtml(listed || 'Not provided')}</span></label>
-            <input type="text" id="confirm_${c.key}" value="${escapeHtml(submission.fields[c.key] || '')}" placeholder="Name and LDAP ID of correct person, or NA">
+            <label>${c.label}<span class="confirm-current">${note}</span></label>
+            <div class="confirm-row">
+              <input type="text" id="confirm_${c.nameKey}" aria-label="${c.label} full name" value="${escapeHtml(submission.fields[c.nameKey] || '')}" placeholder="Please enter full name (or NA)">
+              <input type="text" id="confirm_${c.ldapKey}" aria-label="${c.label} LDAP ID" value="${escapeHtml(submission.fields[c.ldapKey] || '')}" placeholder="Please enter LDAP ID (or NA)">
+            </div>
           </div>`;
                 });
 
@@ -1030,21 +1060,38 @@
                     }
                     const confirmValues = {};
                     const confirmMissing = [];
-                    let firstEmptyConfirm = null;
+                    const confirmMismatch = [];
+                    let firstBadConfirm = null;
                     CONFIRM_FIELDS.forEach(c => {
-                        const inp = document.getElementById('confirm_' + c.key);
-                        const v = inp.value.trim();
-                        confirmValues[c.key] = v;
-                        inp.style.borderColor = v ? '' : 'var(--amber)';
-                        if (!v) {
+                        const nameInp = document.getElementById('confirm_' + c.nameKey);
+                        const ldapInp = document.getElementById('confirm_' + c.ldapKey);
+                        const nv = nameInp.value.trim();
+                        const lv = ldapInp.value.trim();
+                        confirmValues[c.nameKey] = nv;
+                        confirmValues[c.ldapKey] = lv;
+                        nameInp.style.borderColor = nv ? '' : 'var(--amber)';
+                        ldapInp.style.borderColor = lv ? '' : 'var(--amber)';
+                        if (!nv || !lv) {
                             confirmMissing.push(c.label);
-                            if (!firstEmptyConfirm) firstEmptyConfirm = inp;
+                            if (!firstBadConfirm) firstBadConfirm = !nv ? nameInp : ldapInp;
+                        } else if (isNA(nv) !== isNA(lv)) {
+                            // One says NA and the other has a value — ambiguous.
+                            confirmMismatch.push(c.label);
+                            nameInp.style.borderColor = 'var(--amber)';
+                            ldapInp.style.borderColor = 'var(--amber)';
+                            if (!firstBadConfirm) firstBadConfirm = nameInp;
                         }
                     });
                     if (confirmMissing.length > 0) {
-                        saveMsg.textContent = `Please answer the confirmation for: ${confirmMissing.join(', ')} (enter NA if the details are correct).`;
+                        saveMsg.textContent = `Please enter both name and LDAP ID for: ${confirmMissing.join(', ')} (enter NA in both if the details are correct).`;
                         saveMsg.classList.add('error');
-                        firstEmptyConfirm.focus();
+                        firstBadConfirm.focus();
+                        return;
+                    }
+                    if (confirmMismatch.length > 0) {
+                        saveMsg.textContent = `For ${confirmMismatch.join(', ')}: enter NA in both boxes, or a real name and LDAP ID in both.`;
+                        saveMsg.classList.add('error');
+                        firstBadConfirm.focus();
                         return;
                     }
 
@@ -1139,7 +1186,7 @@
             }
 
             function exportCSV(rows) {
-                const headers = ['Sr No', 'Facility', ...FIELD_ORDER.map(f => FIELD_LABELS[f] || f), ...CONFIRM_FIELDS.map(c => c.label + ' - confirmation'), 'Last Filled By', 'Last Updated'];
+                const headers = ['Sr No', 'Facility', ...FIELD_ORDER.map(f => FIELD_LABELS[f] || f), ...CONFIRM_FIELDS.flatMap(c => [c.label + ' - confirmation Name', c.label + ' - confirmation LDAP ID']), 'Last Filled By', 'Last Updated'];
                 const sorted = rows.slice().sort((a, b) => (Number(a.rec.Sr_no) || 0) - (Number(b.rec.Sr_no) || 0));
                 const lines = [headers.map(csvEscape).join(',')];
                 sorted.forEach(r => {
@@ -1149,7 +1196,7 @@
                         const val = !isEmpty(r.sub.fields && r.sub.fields[f]) ? r.sub.fields[f] : (r.rec[f] || '');
                         rowArr.push(val);
                     });
-                    CONFIRM_FIELDS.forEach(c => rowArr.push((r.sub.fields && r.sub.fields[c.key]) || ''));
+                    CONFIRM_KEYS.forEach(k => rowArr.push((r.sub.fields && r.sub.fields[k]) || ''));
                     rowArr.push(r.sub.filledBy || '');
                     rowArr.push(r.sub.updatedAt || '');
                     lines.push(rowArr.map(csvEscape).join(','));
