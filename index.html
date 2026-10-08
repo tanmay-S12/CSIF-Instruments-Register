@@ -330,6 +330,61 @@
             font-family: 'Inter', sans-serif;
         }
 
+        .confirm-block {
+            background: var(--teal-tint);
+            border: 1px solid #C7DDD7;
+            border-radius: 2px;
+            padding: 16px 18px;
+            margin-bottom: 26px;
+        }
+
+        .confirm-title {
+            font-size: 13.5px;
+            font-weight: 600;
+            color: var(--teal-deep);
+            line-height: 1.5;
+            margin-bottom: 8px;
+        }
+
+        .confirm-list {
+            margin: 0 0 14px;
+            padding-left: 20px;
+            font-size: 13px;
+            line-height: 1.55;
+            color: var(--ink);
+        }
+
+        .confirm-item {
+            margin-bottom: 12px;
+        }
+
+        .confirm-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .confirm-item label {
+            display: block;
+            font-size: 12.5px;
+            font-weight: 600;
+            color: var(--teal-deep);
+            margin-bottom: 4px;
+        }
+
+        .confirm-current {
+            font-weight: 400;
+            color: var(--ink-soft);
+            margin-left: 6px;
+        }
+
+        .confirm-item input {
+            width: 100%;
+            padding: 9px 10px;
+            font-size: 14px;
+            border: 1px solid #B7CFC8;
+            border-radius: 2px;
+            font-family: 'Inter', sans-serif;
+        }
+
         .field-grid {
             display: flex;
             flex-direction: column;
@@ -653,8 +708,20 @@
                 SOP: 'SOP document',
                 'Training and Other Policy Documents': 'Training / policy documents',
                 'Other Related Details Regarding Instrument': 'Other details',
-                Publications: 'Publications'
+                Publications: 'Publications',
+                // Confirmation columns — these headers must exist in the Sheet exactly as written.
+                Confirm_In_Charge: 'In-charge confirmation',
+                Confirm_Manager: 'Manager confirmation',
+                Confirm_Operator: 'Operator confirmation'
             };
+
+            // "Are the in-charge / manager / operator details correct?" answers.
+            // 'current' is the form field whose value is shown as "Currently listed".
+            const CONFIRM_FIELDS = [
+                { key: 'Confirm_In_Charge', label: 'Facility In-charge', current: 'Facility_In_Charge' },
+                { key: 'Confirm_Manager', label: 'Facility Manager', current: 'Facility_Manager' },
+                { key: 'Confirm_Operator', label: 'Facility Operator', current: 'Facility_Operator' }
+            ];
             const LONG_FIELDS = new Set(['Features_Working_Principle', 'Body', 'Facility_Description',
                 'Instruction_for_Sample_Preparation', 'Applications']);
 
@@ -711,7 +778,7 @@
                     rows.forEach(row => {
                         const srNo = String(row['Sr No']);
                         const fields = {};
-                        FIELD_ORDER.forEach(f => {
+                        FIELD_ORDER.concat(CONFIRM_FIELDS.map(c => c.key)).forEach(f => {
                             const label = SHEET_HEADERS[f] || f;
                             if (row[label] !== undefined && row[label] !== null && String(row[label]).trim() !== '') fields[f] = row[label];
                         });
@@ -852,6 +919,15 @@
       </div>`;
                     }
                 });
+                let confirmHtml = '';
+                CONFIRM_FIELDS.forEach(c => {
+                    const listed = currentValue(c.current);
+                    confirmHtml += `<div class="confirm-item">
+            <label for="confirm_${c.key}">${c.label}<span class="confirm-current">Currently listed: ${escapeHtml(listed || 'Not provided')}</span></label>
+            <input type="text" id="confirm_${c.key}" value="${escapeHtml(submission.fields[c.key] || '')}" placeholder="Name and LDAP ID of correct person, or NA">
+          </div>`;
+                });
+
                 detailPanel.innerHTML = `
       <button class="back-btn" id="backBtn">&larr; Back to search</button>
       <div class="card">
@@ -864,6 +940,14 @@
           <div class="name-field">
             <label>Your name (so we know who to thank / ask follow-up questions)</label>
             <input type="text" id="filledByInput" value="${escapeHtml(submission.filledBy || '')}" placeholder="e.g. Dr. A. Sharma">
+          </div>
+          <div class="confirm-block">
+            <div class="confirm-title">Please confirm whether the Facility In-charge, Facility Manager, and Facility Operator details in the form are correct.</div>
+            <ul class="confirm-list">
+              <li>If the details need to be updated, please enter the name and LDAP ID of the correct person.</li>
+              <li>If the details are correct, please enter “NA”.</li>
+            </ul>
+            ${confirmHtml}
           </div>
           <div class="field-grid" id="fieldGrid">${fieldsHtml}</div>
           <div class="submit-bar">
@@ -944,12 +1028,33 @@
                     } else {
                         nameInput.style.borderColor = '';
                     }
+                    const confirmValues = {};
+                    const confirmMissing = [];
+                    let firstEmptyConfirm = null;
+                    CONFIRM_FIELDS.forEach(c => {
+                        const inp = document.getElementById('confirm_' + c.key);
+                        const v = inp.value.trim();
+                        confirmValues[c.key] = v;
+                        inp.style.borderColor = v ? '' : 'var(--amber)';
+                        if (!v) {
+                            confirmMissing.push(c.label);
+                            if (!firstEmptyConfirm) firstEmptyConfirm = inp;
+                        }
+                    });
+                    if (confirmMissing.length > 0) {
+                        saveMsg.textContent = `Please answer the confirmation for: ${confirmMissing.join(', ')} (enter NA if the details are correct).`;
+                        saveMsg.classList.add('error');
+                        firstEmptyConfirm.focus();
+                        return;
+                    }
+
                     if (emptyLabels.length > 0) {
                         saveMsg.textContent = `Please fill in: ${emptyLabels.slice(0, 3).join(', ')}${emptyLabels.length > 3 ? ` (+${emptyLabels.length - 3} more)` : ''}`;
                         saveMsg.classList.add('error');
                         return;
                     }
 
+                    Object.assign(updated, confirmValues);
                     submitBtn.disabled = true;
                     saveMsg.textContent = 'Saving…';
                     saveMsg.classList.remove('error');
@@ -957,7 +1062,14 @@
                         const updatedAt = new Date().toISOString();
                         await saveSubmission(srNo, rec.Facility, { fields: updated, filledBy: filledBy, updatedAt: updatedAt });
                         saveMsg.textContent = 'Saved. Thank you!';
-                        setTimeout(() => openDetail(srNo), 700);
+                        setTimeout(() => {
+                            // Go back to the search list; SUBMISSIONS was already updated,
+                            // so the list shows this instrument's new status.
+                            detailPanel.style.display = 'none';
+                            searchPanel.style.display = 'block';
+                            renderResults(searchInput.value);
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }, 800);
                     } catch (e) {
                         saveMsg.textContent = 'Could not save — please try again.';
                         saveMsg.classList.add('error');
@@ -1027,7 +1139,7 @@
             }
 
             function exportCSV(rows) {
-                const headers = ['Sr No', 'Facility', ...FIELD_ORDER.map(f => FIELD_LABELS[f] || f), 'Last Filled By', 'Last Updated'];
+                const headers = ['Sr No', 'Facility', ...FIELD_ORDER.map(f => FIELD_LABELS[f] || f), ...CONFIRM_FIELDS.map(c => c.label + ' - confirmation'), 'Last Filled By', 'Last Updated'];
                 const sorted = rows.slice().sort((a, b) => (Number(a.rec.Sr_no) || 0) - (Number(b.rec.Sr_no) || 0));
                 const lines = [headers.map(csvEscape).join(',')];
                 sorted.forEach(r => {
@@ -1037,6 +1149,7 @@
                         const val = !isEmpty(r.sub.fields && r.sub.fields[f]) ? r.sub.fields[f] : (r.rec[f] || '');
                         rowArr.push(val);
                     });
+                    CONFIRM_FIELDS.forEach(c => rowArr.push((r.sub.fields && r.sub.fields[c.key]) || ''));
                     rowArr.push(r.sub.filledBy || '');
                     rowArr.push(r.sub.updatedAt || '');
                     lines.push(rowArr.map(csvEscape).join(','));
