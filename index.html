@@ -391,6 +391,19 @@
             font-family: 'Inter', sans-serif;
         }
 
+        .portal-note {
+            background: var(--amber-tint);
+            border: 1px solid var(--amber-line);
+            border-left: 5px solid var(--amber);
+            border-radius: 2px;
+            padding: 14px 18px;
+            margin-bottom: 20px;
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--ink);
+            line-height: 1.4;
+        }
+
         .field-grid {
             display: flex;
             flex-direction: column;
@@ -681,6 +694,9 @@
                 'Chemical_allowed', 'Gases_allowed', 'Publications'];
 
             const NON_EDITABLE_FIELDS = new Set(['Make', 'Model', 'Facility_In_Charge', 'Facility_Manager', 'Facility_Operator']);
+            // Only fields a user can actually fill are counted as "missing".
+            // Read-only fields (above) are never counted, even if their data is empty.
+            const EDITABLE_FIELDS = FIELD_ORDER.filter(f => !NON_EDITABLE_FIELDS.has(f));
 
             // removed -- Category: 'Category', 'Department', Department: 'Department',
             const FIELD_LABELS = {
@@ -847,7 +863,7 @@
             function missingCountFor(rec) {
                 const sub = SUBMISSIONS[String(rec.Sr_no)];
                 let n = 0;
-                FIELD_ORDER.forEach(f => {
+                EDITABLE_FIELDS.forEach(f => {
                     const val = (sub && !isEmpty(sub.fields[f])) ? sub.fields[f] : rec[f];
                     if (isEmpty(val)) n++;
                 });
@@ -920,7 +936,7 @@
                 }
 
                 let missingTotal = 0;
-                FIELD_ORDER.forEach(f => { if (isEmpty(currentValue(f))) missingTotal++; });
+                EDITABLE_FIELDS.forEach(f => { if (isEmpty(currentValue(f))) missingTotal++; });
 
                 let fieldsHtml = '';
                 FIELD_ORDER.forEach(f => {
@@ -979,6 +995,7 @@
             </ul>
             ${confirmHtml}
           </div>
+          <div class="portal-note">The following information is fetched from instruments.iitb.ac.in portal</div>
           <div class="field-grid" id="fieldGrid">${fieldsHtml}</div>
           <div class="submit-bar">
             <button class="submit-btn" id="submitBtn">Save</button>
@@ -1136,8 +1153,8 @@
                 const rows = RAW.map(rec => {
                     const sub = subs[String(rec.Sr_no)] || { fields: {} };
                     let miss = 0;
-                    FIELD_ORDER.forEach(f => {
-                        if (isEmpty(rec[f]) && isEmpty(sub.fields[f])) miss++;
+                    EDITABLE_FIELDS.forEach(f => {
+                        if (isEmpty(sub.fields[f]) && isEmpty(rec[f])) miss++;
                     });
                     if (miss === 0) complete++;
                     missingFieldsTotal += miss;
